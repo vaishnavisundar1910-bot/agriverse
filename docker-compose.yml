@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: agriverse_mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - agriverse_network
+
+  backend:
+    build: ./backend
+    container_name: agriverse_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: mongodb://admin:admin123@mongodb:27017/agriverse?authSource=admin
+      JWT_SECRET: your-secret-key-change-in-production
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+    depends_on:
+      - mongodb
+    networks:
+      - agriverse_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: ./frontend
+    container_name: agriverse_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - agriverse_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  agriverse_network:
+    driver: bridge
